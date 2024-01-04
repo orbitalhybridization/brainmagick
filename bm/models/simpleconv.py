@@ -18,6 +18,7 @@ from .common import (
     DualPathRNN, ChannelMerger, ChannelDropout, pad_multiple
 )
 
+import pdb
 
 class SimpleConv(nn.Module):
     def __init__(self,
@@ -158,6 +159,13 @@ class SimpleConv(nn.Module):
             sizes[name] = [in_channels[name]]
             sizes[name] += [int(round(hidden[name] * growth ** k)) for k in range(depth)]
 
+
+        # add aggregation layer
+        # TODO: add other aggregation types (learned affine projection, attention)
+        self.agg_layer = nn.AvgPool2d(kernel_size=kernel_size)
+        # self.agg_layer = nn.MultiheadAttention(embed_dim=hidden)
+
+        # add two MLP heads
         params: tp.Dict[str, tp.Any]
         params = dict(kernel=kernel_size, stride=1,
                       leakiness=relu_leakiness, dropout=conv_dropout, dropout_input=dropout_input,
@@ -235,6 +243,12 @@ class SimpleConv(nn.Module):
             input_list = [x[1] for x in sorted(inputs.items())]
             inputs = {"concat": torch.cat(input_list, dim=1)}
 
+
+        # temporal aggregation
+        # check size of tensor here to make sure we did this in the right place
+        # pdb.set_trace()
+        inputs = self.agg_layer(inputs)
+
         encoded = {}
         for name, x in inputs.items():
             encoded[name] = self.encoders[name](x)
@@ -246,4 +260,6 @@ class SimpleConv(nn.Module):
         if self.final is not None:
             x = self.final(x)
         assert x.shape[-1] >= length
+
+
         return x[:, :, :length]

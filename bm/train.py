@@ -24,7 +24,6 @@ from .solver import Solver
 
 logger = logging.getLogger(__name__)
 
-
 def model_hash(model: torch.nn.Module) -> str:
     hasher = sha1()
     for p in model.parameters():
@@ -181,6 +180,7 @@ def main(args: tp.Any) -> float:
     with env.temporary_from_args(args):
         torch.set_num_threads(1)
         logger.info(f"For logs, checkpoints and samples, check {os.getcwd()}.")
+        #import pdb; pdb.set_trace()
         logger.info(f"Caching intermediate data under {args.cache}.")
         logger.debug(args)
         return run(args)

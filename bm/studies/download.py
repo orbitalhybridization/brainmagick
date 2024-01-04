@@ -18,6 +18,7 @@ def download_osf(
 ):
     """"""
     dset_dir = to_absolute_path(Path(dset_dir))
+    #import pdb; pdb.set_trace()
     assert dset_dir.parent.exists()
     dl_dir = dset_dir / "download"
 

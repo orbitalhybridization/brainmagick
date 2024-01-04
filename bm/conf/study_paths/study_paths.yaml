@@ -1,7 +1,9 @@
 # specificy the data paths here
 default:
-  gwilliams2022: ./data/gwilliams2022/
+  gwilliams2022: /home/ijackson/GWilliams2022/
   schoffelen2019: ./data/schoffelen2019/
   brennan2019: ./data/brennan2019/
   broderick2019: ./data/broderick2019/
+  THINGS-MEG: /mnt/sphere/projects/image_decoding_from_brain/THINGS-MEG
 # Add more hostnames below
+# desagpu.ucsd.edu

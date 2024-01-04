@@ -28,3 +28,9 @@ dset:
       random: false
     Wav2VecChunk:
       device: cpu
+    CLIP-text:
+      device: cpu
+    CLIP-vision:
+      device: cpu
+    AutoKL:
+      device: cpu

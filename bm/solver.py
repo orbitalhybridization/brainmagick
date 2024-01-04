@@ -90,6 +90,17 @@ class Solver(flashy.BaseSolver):
             if self.optimizer is not None:
                 self.optimizer.add_param_group({"params": loss.parameters()})
             return loss
+        elif loss == 'clip-mse':
+            kw = dict(self.args.clip)
+            kw.pop('save_best',None)
+            kw.pop('sync_grad',None)
+            loss1 = ClipLoss(**kw, dset_args=self.args.dset)
+            if self.optimizer is not None:
+                self.optimizer.add_param_group({"params": loss.parameters()})
+            loss2 = L2Loss()
+            gamma = self.args.loss_weight # weight for two different losses
+            loss = (gamma * loss1) + ((1-gamma)*(loss2))
+            return loss
         else:
             raise ValueError(f"Unsupported loss {loss}")
 
