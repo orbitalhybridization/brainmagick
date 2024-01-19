@@ -171,3 +171,23 @@ class FeatureDecodingLoss(torch.nn.Module):
                     feature_estimate[feature_mask], feature_output[feature_mask])
 
         return loss
+
+
+class ClipMSELoss(torch.nn.Module):
+
+    """Combined, weighted CLIP and MSE loss for THINGS-MEG encoding
+    """
+
+    def __init__(self, linear=None, twin=True, pool=False, tmin=None, tmax=None,
+                tmin_train=None, tmax_train=None, dset_args=None, center=False):
+        super().__init__()
+        self.clip = ClipLoss()
+        self.mse = L2Loss() # TODO: check, masking parameter might be important here
+        self.gamma = 0.5 # weighting hyperparameter TODO: get this from args
+
+    def forward(self,estimate,candidate):
+
+        clip_loss = self.clip(estimate,candidate)
+        mse_loss = self.mse(estimate,candidate)
+        combined_loss = ((self.gamma * clip_loss) + ((1 - self.gamma) * mse_loss))
+        return combined_loss

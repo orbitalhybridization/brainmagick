@@ -75,6 +75,7 @@ class WordEmbedding(base.Feature):
             out = self.default_value
         else:
             out = torch.Tensor(self.model(word)[0].vector)
+            import pdb; pdb.set_trace()
         return out
 
     def get(self, event: events.Word) -> torch.Tensor:

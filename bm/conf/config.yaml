@@ -72,7 +72,7 @@ test:
 
 dset:
   selections:
-    - gwilliams2022
+    - hebart2023
   tmin: -0.5
   tmax: 2.5
   n_recordings: 1000
@@ -100,6 +100,7 @@ dset:
   ignore_start_in_block: false  # Same but for the beginning of a segment (e.g. [tmin, 0]).
   sample_rate: 120              # All studies will be resampled to that many Hertz.
   highpass: 0                   # Highpass filter in Hz.
+  lowpass: 0                    # Lowpass filter in Hz.
   event_mask: true              # If true, returns a mask indicating when a stimulus occurs in epoch.
                                 # For non contrastive losses, only compute the loss where the mask is True.
   split_wav_as_block: true      # Split wav files into smaller chunks that do not overlap block boundaries.

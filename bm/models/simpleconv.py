@@ -18,8 +18,6 @@ from .common import (
     DualPathRNN, ChannelMerger, ChannelDropout, pad_multiple
 )
 
-import pdb
-
 class SimpleConv(nn.Module):
     def __init__(self,
                  # Channels
@@ -162,10 +160,16 @@ class SimpleConv(nn.Module):
 
         # add aggregation layer
         # TODO: add other aggregation types (learned affine projection, attention)
-        self.agg_layer = nn.AvgPool2d(kernel_size=kernel_size)
+        self.agg_layer = nn.AdaptiveAvgPool1d((1))
         # self.agg_layer = nn.MultiheadAttention(embed_dim=hidden)
 
-        # add two MLP heads
+        # add two MLP heads for each loss term to get output to desired feature size
+        # TODO: put these values in the args
+        embed_dim = 1024
+        num_classes = 768
+        self.mlp_head_clip = nn.Sequential(nn.LayerNorm(embed_dim), nn.GELU(), nn.Linear(embed_dim,num_classes))
+        self.mlp_head_mse = nn.Sequential(nn.LayerNorm(embed_dim), nn.GELU(), nn.Linear(embed_dim,num_classes))
+
         params: tp.Dict[str, tp.Any]
         params = dict(kernel=kernel_size, stride=1,
                       leakiness=relu_leakiness, dropout=conv_dropout, dropout_input=dropout_input,
@@ -243,12 +247,6 @@ class SimpleConv(nn.Module):
             input_list = [x[1] for x in sorted(inputs.items())]
             inputs = {"concat": torch.cat(input_list, dim=1)}
 
-
-        # temporal aggregation
-        # check size of tensor here to make sure we did this in the right place
-        # pdb.set_trace()
-        inputs = self.agg_layer(inputs)
-
         encoded = {}
         for name, x in inputs.items():
             encoded[name] = self.encoders[name](x)
@@ -261,5 +259,16 @@ class SimpleConv(nn.Module):
             x = self.final(x)
         assert x.shape[-1] >= length
 
+        # temporal aggregation
+        x = self.agg_layer(x)
+        x = x.squeeze()
 
-        return x[:, :, :length]
+        # MLP heads go here for final output
+        x_mse_head = self.mlp_head_mse(x)
+        x_clip_head = self.mlp_head_clip(x)
+
+        # return x[:, :, :length] # old return
+
+        # return x_mse_head,x_clip_head # possible new return, not sure if need two?
+
+        return x_mse_head # return one for now

@@ -90,16 +90,13 @@ class Solver(flashy.BaseSolver):
             if self.optimizer is not None:
                 self.optimizer.add_param_group({"params": loss.parameters()})
             return loss
-        elif loss == 'clip-mse':
-            kw = dict(self.args.clip)
+        elif loss == 'clipmse':
+            kw = dict(self.args.clipmse)
             kw.pop('save_best',None)
             kw.pop('sync_grad',None)
-            loss1 = ClipLoss(**kw, dset_args=self.args.dset)
             if self.optimizer is not None:
                 self.optimizer.add_param_group({"params": loss.parameters()})
-            loss2 = L2Loss()
-            gamma = self.args.loss_weight # weight for two different losses
-            loss = (gamma * loss1) + ((1-gamma)*(loss2))
+            loss = ClipMSELoss(**kw, dset_args=self.args.dset)
             return loss
         else:
             raise ValueError(f"Unsupported loss {loss}")
@@ -329,6 +326,7 @@ class Solver(flashy.BaseSolver):
                     ).bool()
             else:
                 output = self.feature_model(output)
+
         return estimate, output, features_mask, reject_mask
 
     # NOTE: "epoch" in neuro dataset terminology means a recording session where user is presented

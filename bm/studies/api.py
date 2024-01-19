@@ -190,7 +190,9 @@ class Recording:
         return f"{self.__class__.__name__}({self.recording_uid!r})"
 
     def preprocessed(self, sample_rate: tp.Optional[float] = None,
-                     highpass: float = 0) -> mne.io.RawArray:
+                     highpass: float = 0, lowpass: float = 0,
+                     center: bool = True, clipping: bool = True,
+                     n_std_errs: tp.Optional[int] = 5) -> mne.io.RawArray:
         """Creates and/or loads the data at a given sampling rate.
         1200Hz sample_rate with no highpass (0) would returns the raw,
         different values would create a subsampled fif file and load it from the cache.
@@ -201,6 +203,18 @@ class Recording:
             The wanted sample rate of the data.
         highpass: float
             the frequency of the highpass filter (no high pass filter if 0)
+
+        lowpass: float
+            the frequency of the lowpass filter (no lowpass if 0)
+
+        center: bool
+            whether to perform centering on the raw data (subtract by global mean)
+
+        clipping: bool
+            whether to clip the values by +/- standard error values
+
+        n_std_errs: int
+            how many standard errors to clip by
         """
         if sample_rate is not None and sample_rate != int(sample_rate):
             raise ValueError(
@@ -226,7 +240,8 @@ class Recording:
                                f"(subsampled at {sample_rate}Hz) storage.")
         assert filepath is not None
         if not filepath.exists():
-            low_mne = preprocess_mne(self.raw(), sample_rate=sample_rate, highpass=highpass)
+            low_mne = preprocess_mne(self.raw(), sample_rate=sample_rate, highpass=highpass,
+                      lowpass=lowpass,center=center,clipping=clipping,n_std_errs=n_std_errs)
             low_mne.save(str(filepath), overwrite=True)
             _give_permission(filepath)  # for sharing
         self._arrays[key] = mne.io.read_raw_fif(str(filepath), preload=False)
@@ -335,6 +350,10 @@ def preprocess_mne(
     raw: mne.io.RawArray,
     sample_rate: int = 200,
     highpass: float = 0,
+    lowpass: float = 0,
+    center: bool = True,
+    clipping: bool = True,
+    n_std_errs: int = 5
 ) -> mne.io.RawArray:
     """Creates a new mne.io.RawArray at another sampling rate
     Parameter:
@@ -344,6 +363,14 @@ def preprocess_mne(
         the required sample rate for the new mne array
     highpass: int
         the frequency of the highpass filter (no high pass filter if 0)
+    lowpass: int
+        the frequency of the lowpass filter (no low pass filter if 0)
+    center: bool
+        whether to center the raw (subtract samples by global mean)
+    clipping: bool
+        whether to clip the raw by +/- standard errors
+    n_std_errs: int
+        how many standard errors before raw is clipped
     """
     data = torch.Tensor(raw.get_data())
     old_sr = int(np.round(raw.info["sfreq"]))
@@ -355,10 +382,28 @@ def preprocess_mne(
     if highpass:
         data -= julius.lowpass_filter(data, highpass / sample_rate)
 
+    if lowpass:
+        data -= julius.lowpass_filter(data, lowpass)
+
+    channel_means = torch.mean(data,1)
+    channel_means = torch.unsqueeze(channel_means,0)
+    channel_means = torch.transpose(channel_means,0,1)
+
+    if center:
+        data -= channel_means # center data
+
+    if clipping: # clip data by standard errors
+         stderr = channel_means / np.sqrt(data.shape[1])
+         max = channel_means + (stderr * n_std_errs)
+         min = channel_means - (stderr * n_std_errs)
+         for row in range(data.shape[0]):
+             data[row,:] = torch.clamp(data[row,:],min=min[row],max=max[row])
+
     info_kwargs = dict(raw.info)
     info_kwargs['sfreq'] = sample_rate
     info = mne.Info(**info_kwargs)
     # check that layout works
+    import pdb; pdb.set_trace()
     layout = mne.find_layout(info)  # noqa
     return mne.io.RawArray(data.numpy(), info=info)
 

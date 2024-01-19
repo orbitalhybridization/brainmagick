@@ -24,6 +24,7 @@ from .solver import Solver
 
 logger = logging.getLogger(__name__)
 
+
 def model_hash(model: torch.nn.Module) -> str:
     hasher = sha1()
     for p in model.parameters():
@@ -43,15 +44,24 @@ def get_solver(args: tp.Any, training=True):
     assert args.dset.sample_rate is not None, "sample rate <= 1200 required"
     kwargs: tp.Dict[str, tp.Any]
     kwargs = OmegaConf.to_container(args.dset, resolve=True)  # type: ignore
+    print(args.dset.selections)
     selections = [args.selections[x] for x in args.dset.selections]
     kwargs["selections"] = selections
     if args.optim.loss == "clip":
-        kwargs['extra_test_features'].append("WordHash")
+        # import pdb; pdb.set_trace()
+        if 'hebart2023' not in args.dset.selections:
+            kwargs['extra_test_features'].append("WordHash")
+
+    # dsets = dset.get_datasets(
+    #     num_workers=args.num_workers, progress=True,
+    #     **kwargs,
+    # )
 
     dsets = dset.get_datasets(
-        num_workers=args.num_workers, progress=True,
+        num_workers=1, progress=True,
         **kwargs,
     )
+
     if args.download_only:
         sys.exit(0)
 
@@ -180,7 +190,6 @@ def main(args: tp.Any) -> float:
     with env.temporary_from_args(args):
         torch.set_num_threads(1)
         logger.info(f"For logs, checkpoints and samples, check {os.getcwd()}.")
-        #import pdb; pdb.set_trace()
         logger.info(f"Caching intermediate data under {args.cache}.")
         logger.debug(args)
         return run(args)

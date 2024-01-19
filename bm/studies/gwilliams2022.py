@@ -119,6 +119,7 @@ class Gwilliams2022Recording(api.Recording):
 
         # extract annotations
         events = list()
+        import pdb; pdb.set_trace()
         for annot in raw.annotations:
             event = eval(annot.pop("description"))
             event['start'] = annot['onset']
